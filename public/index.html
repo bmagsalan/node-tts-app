@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech</title>
+</head>
+<body>
+    <h1>Text-to-Speech</h1>
+    <textarea id="textInput" rows="10" cols="50">This program allows you to convert text into speech. Simply enter your desired text in the textarea below, then click the "Convert to Speech" button. The program will then send the text to the server, where it will be converted into audio. Once the audio is generated, you can play it using the audio player provided.</textarea>
+    <br>
+    <button id="convertButton">Convert to Speech</button>
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        const convertButton = document.getElementById('convertButton');
+        const textInput = document.getElementById('textInput');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        // Event listener for the convert button
+        convertButton.addEventListener('click', async () => {
+            let text = textInput.value.trim();
+            if (text === '') {
+                alert('Please enter some text to convert.');
+                return;
+            }
+
+            // Escape special characters
+            text = text.replace(/\\/g, '\\\\')
+                       .replace(/"/g, '\\"');
+
+            // Send the text to the server to convert to speech
+            const response = await fetch('/text-to-speech', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+
+            if (!response.ok) {
+                console.error('Error converting text to speech:', response.statusText);
+                return;
+            }
+
+            // Play the audio received from the server
+            const audioBlob = await response.blob();
+            audioPlayer.src = URL.createObjectURL(audioBlob);
+            audioPlayer.play();
+        });
+    </script>
+</body>
+</html>
