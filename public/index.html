@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech</title>
+    <style>
+        .highlight {
+            background-color: yellow;
+        }
+    </style>
 </head>
 <body>
     <h1>Text-to-Speech</h1>
@@ -55,6 +60,9 @@
             // Get the next sentence
             const nextSentence = sentences[currentSentenceIndex];
 
+            // Highlight the current sentence in the text area
+            highlightSentence(nextSentence);
+
             // Send the next sentence to the server to convert to speech
             const response = await fetch('/text-to-speech', {
                 method: 'POST',
@@ -78,7 +86,30 @@
             currentSentenceIndex++;
 
             // Listen for the end of audio playback
-            audioPlayer.addEventListener('ended', speakNextSentence);
+            audioPlayer.addEventListener('ended', () => {
+                // Unselect the text after the sentence is read
+                unhighlightSentence(nextSentence);
+                speakNextSentence();
+            });
+        };
+
+        // Function to highlight a sentence in the text area
+        const highlightSentence = (sentence) => {
+            const text = textInput.value;
+            const startIndex = text.indexOf(sentence);
+            const endIndex = startIndex + sentence.length;
+            textInput.setSelectionRange(startIndex, endIndex);
+            textInput.focus();
+            document.execCommand('highlight');
+        };
+
+        // Function to unhighlight a sentence in the text area
+        const unhighlightSentence = (sentence) => {
+            const text = textInput.value;
+            const startIndex = text.indexOf(sentence);
+            const endIndex = startIndex + sentence.length;
+            textInput.setSelectionRange(startIndex, endIndex);
+            document.execCommand('unhighlight');
         };
     </script>
 </body>
