@@ -17,6 +17,14 @@
         const textInput = document.getElementById('textInput');
         const audioPlayer = document.getElementById('audioPlayer');
 
+        let sentences = []; // Array to store sentences
+        let currentSentenceIndex = 0; // Index of the current sentence being read
+
+        // Function to split text into sentences
+        const splitTextIntoSentences = (text) => {
+            return text.match(/[^\.!\?]+[\.!\?]+/g);
+        };
+
         // Event listener for the convert button
         convertButton.addEventListener('click', async () => {
             let text = textInput.value.trim();
@@ -25,17 +33,35 @@
                 return;
             }
 
+            // Split text into sentences
+            sentences = splitTextIntoSentences(text);
+
             // Escape special characters
             text = text.replace(/\\/g, '\\\\')
                        .replace(/"/g, '\\"');
 
-            // Send the text to the server to convert to speech
+            // Send the first sentence to the server to convert to speech
+            await speakNextSentence();
+        });
+
+        // Function to speak the next sentence
+        const speakNextSentence = async () => {
+            if (currentSentenceIndex >= sentences.length) {
+                // All sentences have been spoken
+                console.log('All sentences have been spoken.');
+                return;
+            }
+
+            // Get the next sentence
+            const nextSentence = sentences[currentSentenceIndex];
+
+            // Send the next sentence to the server to convert to speech
             const response = await fetch('/text-to-speech', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ text })
+                body: JSON.stringify({ text: nextSentence })
             });
 
             if (!response.ok) {
@@ -47,7 +73,13 @@
             const audioBlob = await response.blob();
             audioPlayer.src = URL.createObjectURL(audioBlob);
             audioPlayer.play();
-        });
+
+            // Increment the current sentence index
+            currentSentenceIndex++;
+
+            // Listen for the end of audio playback
+            audioPlayer.addEventListener('ended', speakNextSentence);
+        };
     </script>
 </body>
 </html>
