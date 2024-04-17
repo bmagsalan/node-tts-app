@@ -4,18 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech</title>
+    <!-- Add Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.3.1/socket.io.min.js"></script>
 </head>
 <body>
     <h1>Text-to-Speech</h1>
-    <textarea id="textInput" rows="10" cols="50">This program allows you to convert text into speech. Simply enter your desired text in the textarea below, then click the "Convert to Speech" button. The program will then send the text to the server, where it will be converted into audio. Once the audio is generated, you can play it using the audio player provided.</textarea>
+    <textarea id="textInput" rows="10" cols="50">This program allows you to convert text into speech. Simply enter your desired text in the textarea below, then click the Convert to Speech button. The program will then send the text to the server, where it will be converted into audio. Once the audio is generated, you can play it using the audio player provided.</textarea>
     <br>
     <button id="convertButton">Convert to Speech</button>
+    <!-- Add Stop Speech button -->
+    <button id="stopSpeech">Stop Speech</button>
+    <!-- Add Highlight Next Sentence button -->
+    <button id="highlightNextSentence">Highlight Next Sentence</button>
+    <!-- Add Highlight Previous Sentence button -->
+    <button id="highlightPrevSentence">Highlight Previous Sentence</button>
     <audio id="audioPlayer" controls></audio>
 
     <script>
         const convertButton = document.getElementById('convertButton');
+        const stopSpeechButton = document.getElementById('stopSpeech');
+        const highlightNextButton = document.getElementById('highlightNextSentence');
+        const highlightPrevButton = document.getElementById('highlightPrevSentence');
         const textInput = document.getElementById('textInput');
         const audioPlayer = document.getElementById('audioPlayer');
+
+        // Connect to the server using Socket.IO
+        const socket = io();
 
         let sentences = []; // Array to store sentences
         let currentSentenceIndex = 0; // Index of the current sentence being read
@@ -39,10 +53,56 @@
             // Escape special characters
             text = text.replace(/\\/g, '\\\\')
                        .replace(/"/g, '\\"');
-
             // Send the first sentence to the server to convert to speech
             await speakNextSentence();
         });
+
+        // Event listener for the stop speech button
+        stopSpeechButton.addEventListener('click', async() => {
+            // Emit a stop event to the server
+            // socket.emit('stop_speech');
+            currentSentenceIndex = 0;
+            await speakNextSentence();
+        });
+
+        // Event listener for highlighting the next sentence
+        highlightNextButton.addEventListener('click', () => {
+            highlightNextSentence();
+        });
+
+        // Event listener for highlighting the previous sentence
+        highlightPrevButton.addEventListener('click', () => {
+            highlightPrevSentence();
+        });
+
+        // Function to highlight the current sentence
+        const highlightCurrentSentence = () => {
+            // Remove any previous highlights
+            textInput.style.backgroundColor = '';
+
+            // Highlight the current sentence
+            const currentSentenceStart = textInput.value.indexOf(sentences[currentSentenceIndex]);
+            const currentSentenceEnd = currentSentenceStart + sentences[currentSentenceIndex].length;
+            textInput.setSelectionRange(currentSentenceStart, currentSentenceEnd);
+            console.log("%d %d", currentSentenceStart,currentSentenceEnd)
+            textInput.style.backgroundColor = 'yellow';
+        };
+
+        // Function to highlight the next sentence
+        const highlightNextSentence = () => {
+            if (currentSentenceIndex < sentences.length - 1) {
+                currentSentenceIndex++;
+                highlightCurrentSentence();
+            }
+        };
+
+        // Function to highlight the previous sentence
+        const highlightPrevSentence = () => {
+            if (currentSentenceIndex > 0) {
+                currentSentenceIndex--;
+                highlightCurrentSentence();
+            }
+        };
 
         // Function to speak the next sentence
         const speakNextSentence = async () => {
@@ -55,31 +115,27 @@
             // Get the next sentence
             const nextSentence = sentences[currentSentenceIndex];
 
+            // Highlight the current sentence
+            highlightCurrentSentence();
+
             // Send the next sentence to the server to convert to speech
-            const response = await fetch('/text-to-speech', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ text: nextSentence })
-            });
+            socket.emit('convert_text_to_speech', { text: nextSentence });
+        };
 
-            if (!response.ok) {
-                console.error('Error converting text to speech:', response.statusText);
-                return;
-            }
-
+        // Listen for the audio data from the server
+        socket.on('audio_data', (audioData) => {
             // Play the audio received from the server
-            const audioBlob = await response.blob();
-            audioPlayer.src = URL.createObjectURL(audioBlob);
+            audioPlayer.src = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
+            
+
             audioPlayer.play();
+
+            // When audio playback ends, speak the next sentence
+            audioPlayer.addEventListener('ended', speakNextSentence);
 
             // Increment the current sentence index
             currentSentenceIndex++;
-
-            // Listen for the end of audio playback
-            audioPlayer.addEventListener('ended', speakNextSentence);
-        };
+        });
     </script>
 </body>
 </html>

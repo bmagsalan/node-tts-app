@@ -42,7 +42,52 @@ app.post('/text-to-speech', async (req, res) => {
   }
 });
 
+// Add Socket.IO code
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+// Listen for socket connections
+io.on('connection', (socket) => {
+    console.log('A user connected');
+
+    // Listen for convert_text_to_speech event
+    socket.on('convert_text_to_speech', async (data) => {
+        const text = data.text;
+        const outputFile = 'output.wav'; // Output audio file
+
+        // Use espeak-ng to convert text to speech
+        exec(`espeak-ng -w ${outputFile} "${text}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.error('Error converting text to speech:', error);
+                return;
+            }
+
+            console.log('Audio file saved successfully!');
+
+            // Read the audio file
+            const audioData = fs.readFileSync(outputFile);
+
+            // Emit the audio data to the client
+            socket.emit('audio_data', audioData);
+        });
+    });
+
+    // Listen for stop_speech event
+    socket.on('stop_speech', () => {
+        // Add logic to stop speech if needed
+        console.log('Stop speech requested');
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log('A user disconnected');
+    });
+});
+
 // Start the server
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Server is listening at http://localhost:${port}`);
 });
