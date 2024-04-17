@@ -1,15 +1,22 @@
 {
-    "version": "0.2.0",
-    "configurations": [
+  "version": "0.2.0",
+  "configurations": [
       {
-        "type": "node",
-        "request": "launch",
-        "name": "Launch Node.js App",
-        "program": "${workspaceFolder}/server.mjs",
-        "skipFiles": [
-          "<node_internals>/**"
-        ]
+          "name": "Python: Flask",
+          "type": "python",
+          "request": "launch",
+          "module": "flask",
+          "env": {
+              "FLASK_APP": "app.py",
+              "FLASK_ENV": "development"
+          },
+          "args": [
+              "run",
+              "--no-debugger",
+              "--no-reload"
+          ],
+          "jinja": true,
+          "pythonPath": "${workspaceFolder}/venv/bin/python"
       }
-    ]
-  }
-  
+  ]
+}
